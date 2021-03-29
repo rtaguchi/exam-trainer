@@ -40,6 +40,7 @@ async function createWindow() {
   }
 
   const isMac = process.platform === 'darwin'
+  const isWin = process.platform === 'win32' 
   const template = [
     // { role: 'appMenu' }
     ...(isMac ? [{
@@ -64,7 +65,10 @@ async function createWindow() {
           const filepaths = dialog.showOpenDialogSync(win, {properties: ['openFile']})
           if (filepaths) {
             const examData = fs.readFileSync(filepaths[0]).toString()
-            const examTitle = filepaths[0].split('/')[filepaths[0].split('/').length-1].replace('.json','').replaceAll('_',' ')
+            
+            const examTitle = isWin?
+              filepaths[0].split('\\')[filepaths[0].split('\\').length-1].replace('.json','').replaceAll('_',' '):
+              filepaths[0].split('/')[filepaths[0].split('/').length-1].replace('.json','').replaceAll('_',' ')
             win.webContents.send('open', [examData, examTitle])
           }
         }},

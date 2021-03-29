@@ -12,7 +12,7 @@
       <el-row :gutter="10">
         <el-col :span="10">
           <el-card class="card-header" header="Questions / 1 Set" :body-style="{height:'42px'}">
-            <el-radio-group v-model="qSet">
+            <el-radio-group v-model="state.qSet">
               <el-radio-button label="10"></el-radio-button>
               <el-radio-button label="20"></el-radio-button>
               <el-radio-button label="30"></el-radio-button>
@@ -23,7 +23,7 @@
         </el-col>
         <el-col :span="10">
           <el-card header="Sorting" :body-style="{height:'42px'}">
-            <el-select v-model="sortPattern">
+            <el-select v-model="state.sortPattern">
               <el-option
                 v-for="item in sortItems"
                 :key="item.value"
@@ -31,7 +31,7 @@
                 :value="item.value">
               </el-option>
             </el-select>
-            <el-radio-group v-model="sortOrder" v-if="sortPattern != 'nothing'">
+            <el-radio-group v-model="state.sortOrder" v-if="state.sortPattern != 'nothing'">
               <el-radio-button label="ASC" ><i class="el-icon-caret-top"></i></el-radio-button>
               <el-radio-button label="DESC"><i class="el-icon-caret-bottom"></i></el-radio-button>
             </el-radio-group>
@@ -41,8 +41,8 @@
         <el-col :span="4">
           <el-card header="Options" :body-style="{height:'42px'}">
             <el-space direction="vertical" :size="4">
-              <el-checkbox v-model="shuffleChoices" disabled>Shuffle Choices</el-checkbox>
-              <el-checkbox v-model="onlyLatest" disabled>Only Latest</el-checkbox>
+              <el-checkbox v-model="state.shuffleChoices" disabled>Shuffle Choices</el-checkbox>
+              <el-checkbox v-model="state.onlyLatest" disabled>Only Latest</el-checkbox>
             </el-space>
           </el-card>
         </el-col>
@@ -52,7 +52,7 @@
         <el-col :span="12">
           <el-card header="Correct Answer Rate Filter" :body-style="{height:'42px'}">
             <el-tag
-              v-for="rate in rates"
+              v-for="rate in state.rates"
               :key="rate.name"
               closable
               :type="rate.type"
@@ -65,7 +65,7 @@
           <el-card header="Question Number Range Filter" :body-style="{height:'42px'}">
             <el-row>
             <el-col :offset="2" :span="20">
-              <el-slider v-model="qRange" range :min="1" :max="questionList.length" />
+              <el-slider v-model="state.qRange" range :min="1" :max="questionList.length" />
             </el-col>
             </el-row>
           </el-card>
@@ -91,11 +91,10 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, ref, watch, PropType, onMounted, toRaw, Ref } from 'vue';
+import { defineComponent, computed, ref, watch, PropType, reactive, toRaw, Ref } from 'vue';
 import { useRouter } from 'vue-router'
 import { Question, AnswerHistory } from '@/@types/index'
 import { DateTime } from 'luxon'
-// import { TweenLite } from 'gsap'
 
 const sortItems = [
     { value: 'qNumber', text: 'Question Number' },
@@ -111,13 +110,25 @@ const initialRates = [
   { name: 'Good', type: 'success'}
   ]
 
-const qSet = ref("20")
-const sortPattern = ref("qNumber")
-const sortOrder = ref("ASC")
-const shuffleChoices = ref(false)
-const onlyLatest = ref(true)
-const rates = ref(initialRates)
-const qRange = ref([1, 1])
+interface State {
+  qSet: string;
+  sortPattern: string;
+  sortOrder: string;
+  shuffleChoices: boolean;
+  onlyLatest: boolean;
+  rates: { name: string; type: string}[];
+  qRange: [number, number];
+}
+
+const state = reactive<State>({
+  qSet: "20",
+  sortPattern: "qNumber",
+  sortOrder: "ASC",
+  shuffleChoices: false,
+  onlyLatest: true,
+  rates: initialRates,
+  qRange: [1, 1]
+})
 
 export default defineComponent({
   name: 'setting',
@@ -134,9 +145,8 @@ export default defineComponent({
   },
   setup(props, context){
     const router = useRouter()
-
     if (props.questionList) {
-      qRange.value = [qRange.value[0], props.questionList.length]
+      state.qRange = [state.qRange[0], props.questionList.length]
     }
 
     const filteredQuestions = computed(()=>{
@@ -144,7 +154,7 @@ export default defineComponent({
         return []
       }
       const rangeFiltered = props.questionList.filter((value: Question)=>{
-        return value.qNumber >= qRange.value[0] && value.qNumber <= qRange.value[1]
+        return value.qNumber >= state.qRange[0] && value.qNumber <= state.qRange[1]
       })
       const withHistory = rangeFiltered.map((value: Question)=>{
         // 追加属性の初期値
@@ -173,7 +183,7 @@ export default defineComponent({
       })
 
       // 正答率のフィルタ
-      const rateList = rates.value.map(value=>value.name)
+      const rateList = state.rates.map(value=>value.name)
       const ansRateFiltered = withHistory.filter(value=>{
         if (value.correctRateStatus) {
           return rateList.includes(value.correctRateStatus)
@@ -183,7 +193,7 @@ export default defineComponent({
       // ソート
       const forSortList = [...ansRateFiltered]
       const listLength = forSortList.length
-      if (sortPattern.value === 'nothing'){
+      if (state.sortPattern === 'nothing'){
         for (let i=listLength-1; i>=0; i--){
           const rand = Math.floor(Math.random() * (i + 1))
           const tmp = forSortList[i]
@@ -192,29 +202,29 @@ export default defineComponent({
         }
         return forSortList
       }
-      if (sortOrder.value == 'ASC'){
+      if (state.sortOrder == 'ASC'){
         return forSortList.sort((a: any, b: any)=>{
-          if (a[sortPattern.value] == b[sortPattern.value]){
+          if (a[state.sortPattern] == b[state.sortPattern]){
             return a['qNumber'] < b['qNumber'] ? -1 : 1
           } else {
-            return a[sortPattern.value] < b[sortPattern.value] ? -1 : 1
+            return a[state.sortPattern] < b[state.sortPattern] ? -1 : 1
           }
         })
       } else {
         return forSortList.sort((a: any, b: any)=>{
-          if (a[sortPattern.value] == b[sortPattern.value]){
+          if (a[state.sortPattern] == b[state.sortPattern]){
             return a['qNumber'] > b['qNumber'] ? -1 : 1
           } else {
-            return a[sortPattern.value] > b[sortPattern.value] ? -1 : 1
+            return a[state.sortPattern] > b[state.sortPattern] ? -1 : 1
           }
         })
       }
     })
 
     const closeRateTab = (rate: {name: string; type: string}) => {
-      rates.value = rates.value.filter(val=>val!=rate)
-      if (rates.value.length < 1) {
-        rates.value = initialRates
+      state.rates = state.rates.filter(val=>val!=rate)
+      if (state.rates.length < 1) {
+        state.rates = initialRates
       }
     }
 
@@ -226,25 +236,19 @@ export default defineComponent({
       if (!props.questionList) {
         return
       }
-      const sortedQuestions = toRaw(filteredQuestions.value).slice(0, Number(qSet.value))
+      const sortedQuestions = toRaw(filteredQuestions.value).slice(0, Number(state.qSet))
       context.emit('setFilteredQuestions', sortedQuestions)
       router.push({name: 'Answering'})
     }
 
     const numberOfQuestion = computed(()=>props.questionList?props.questionList.length:1)
     watch(numberOfQuestion, (newVal)=>{
-      qRange.value[1] = newVal
+      state.qRange[1] = newVal
     })
 
     return {
+      state,
       sortItems,
-      sortPattern,
-      sortOrder,
-      shuffleChoices,
-      onlyLatest,
-      qSet,
-      rates,
-      qRange,
       filteredQuestions,
       closeRateTab,
       startTraining,

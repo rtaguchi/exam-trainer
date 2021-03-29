@@ -6,7 +6,7 @@
       </el-col>
       <el-col :span="20">
         <transition name="fade" mode="out-in">
-          <div v-show="mainDisplay">
+          <div v-show="state.mainDisplay">
             <el-card>
               <template #header>
                 <div class="card-header">
@@ -22,10 +22,10 @@
             <el-card>
               <template v-for="(value, key) in currentQuestion.choices" :key="key">
                 <!-- 複数回答であればチェックボックス -->
-                <el-checkbox-group v-model="checked" v-if="currentQuestion.answer.length > 1">
+                <el-checkbox-group v-model="state.checked" v-if="currentQuestion.answer.length > 1">
                   <el-row type="flex" align="middle" :class="createRowColor(key)">
                     <el-col :span="1">
-                      <el-checkbox :label="key" :disabled="isAnswer"><span></span></el-checkbox>
+                      <el-checkbox :label="key" :disabled="state.isAnswer"><span></span></el-checkbox>
                     </el-col>
                     <el-col :span="23" class="choices" @click="acceptClickMulti(key)">
                       <p :class="createChoicesClass(key)">{{ value }}</p>
@@ -33,10 +33,10 @@
                   </el-row>
                 </el-checkbox-group>
                 <!-- 単数回答であればラジオボタン -->
-                <el-radio-group v-model="selected" v-else>
+                <el-radio-group v-model="state.selected" v-else>
                   <el-row type="flex" align="middle" :class="createRowColor(key)">
                     <el-col :span="1">
-                      <el-radio :label="key" :disabled="isAnswer"><span></span></el-radio>
+                      <el-radio :label="key" :disabled="state.isAnswer"><span></span></el-radio>
                     </el-col>
                     <el-col :span="23"  class="choices" @click="acceptClickSingle(key)">
                       <p :class="createChoicesClass(key)">{{ value }}</p>
@@ -48,12 +48,12 @@
 
               <el-row type="flex" justify="center">
                 <el-col :span="16">
-                  <el-button type="primary" plain icon="el-icon-check" class="under-button" v-if="!isAnswer" @click="answer"/>
+                  <el-button type="primary" plain icon="el-icon-check" class="under-button" v-if="!state.isAnswer" @click="answer"/>
                   <el-button :type="isCorrect?'success':'danger'" icon="el-icon-arrow-right" class="under-button" v-else @click="goToNext" />
                 </el-col>
               </el-row>
 
-              <el-row class="card-explanation" v-if="isAnswer">
+              <el-row class="card-explanation" v-if="state.isAnswer">
                 <p v-for="phrase in currentQuestion.explanation.split('\n')" :key="phrase">
                   {{ phrase }}
                 </p>  
@@ -75,15 +75,15 @@
 
     <!-- 結果表示ダイアログ -->
     <el-dialog 
-      v-model="resultDialog" 
+      v-model="state.resultDialog" 
       width="60%" 
       :show-close="false" 
       :close-on-click-modal="false"
       top="10vh" 
       title="Set Complete!!"
     >
-      <span class="result-text">{{ miniHistory.filter(value=>value.isCorrect).length }} / {{ miniHistory.length }}</span>
-      <el-table :data="miniHistory" height="400" style="width: 100%" stripe>
+      <span class="result-text">{{ state.miniHistory.filter(value=>value.isCorrect).length }} / {{ state.miniHistory.length }}</span>
+      <el-table :data="state.miniHistory" height="400" style="width: 100%" stripe>
         <el-table-column property="qNumber" label="#" width="60"></el-table-column>
         <el-table-column property="partOfQ" label="Part of question"></el-table-column>
         <el-table-column property="isCorrect" label="Correct?" width="120">
@@ -113,12 +113,21 @@
 import { defineComponent, ref, computed, reactive } from 'vue';
 import { useRouter } from 'vue-router'
 import { DateTime } from 'luxon'
-import { Question } from '@/@types/index'
 
 interface MiniHistory {
   qNumber: number;
   partOfQ: string;
   isCorrect: boolean;
+}
+
+interface State {
+  currentIndex: number;
+  checked: string[];
+  selected: string;
+  isAnswer: boolean;
+  resultDialog: boolean;
+  miniHistory: MiniHistory[];
+  mainDisplay: boolean;
 }
 
 export default defineComponent({
@@ -134,72 +143,82 @@ export default defineComponent({
 
   setup(props, context){
     const router = useRouter()
-    const currentIndex = ref<number>(0)
-    const checked = ref<string[]>([])
-    const selected = ref<string>()
-    const isAnswer = ref(false)
-    const resultDialog = ref(false)
-    const miniHistory = ref<MiniHistory[]>([])
-    const mainDisplay = ref(true)
+    const state = reactive<State>({
+      currentIndex: 0,
+      checked: [],
+      selected: '',
+      isAnswer: false,
+      resultDialog: false,
+      miniHistory: [],
+      mainDisplay: true
+    })
+
+    // const currentIndex = ref<number>(0)
+    // const checked = ref<string[]>([])
+    // const selected = ref<string>()
+    // const isAnswer = ref(false)
+    // const resultDialog = ref(false)
+    // const miniHistory = ref<MiniHistory[]>([])
+    // const mainDisplay = ref(true)
 
     const questionSetLength = computed(()=>props.questionSet?props.questionSet.length:0)
-    const currentQuestion = computed(()=>props.questionSet?props.questionSet[currentIndex.value]:'')
-    const checkedAndSelected = computed(()=>[...checked.value, selected.value])
+    const currentQuestion = computed(()=>props.questionSet?props.questionSet[state.currentIndex]:'')
+    const checkedAndSelected = computed(()=>[...state.checked, state.selected])
     const isCorrect = computed(()=>{
       const ans = [...currentQuestion.value.answer]
       const cas = [...checkedAndSelected.value]
       return JSON.stringify(ans.sort()) == JSON.stringify(cas.sort())
     })
     const resultText = computed(()=>{
-      const corrects = miniHistory.value.filter(value=>value.isCorrect).length 
-      return corrects + ' / ' + miniHistory.value.length 
+      const corrects = state.miniHistory.filter(value=>value.isCorrect).length 
+      return corrects + ' / ' + state.miniHistory.length 
     })
 
     const acceptClickSingle = (key: string) => {
-      if (isAnswer.value) { return }
-      selected.value = key
+      if (state.isAnswer) { return }
+      state.selected = key
     }
     const acceptClickMulti = (key: string) => {
-      if (isAnswer.value) { return }
-      const address = checked.value.indexOf(key)
+      if (state.isAnswer) { return }
+      const address = state.checked.indexOf(key)
       if (address >= 0){
-        checked.value.splice(address, 1)
+        state.checked.splice(address, 1)
       } else {
-        checked.value.push(key)
+        state.checked.push(key)
       }
     }
     const initialize = () => {
-      selected.value = ''
-      checked.value = []
-      isAnswer.value = false
+      state.selected = ''
+      state.checked = []
+      state.isAnswer = false
     }
     const goToNext = () => {
-      if (currentIndex.value < questionSetLength.value - 1){
-        mainDisplay.value = false
+      if (state.currentIndex < questionSetLength.value - 1){
+        state.mainDisplay = false
         setTimeout(()=>{
-          mainDisplay.value = true
-          currentIndex.value = currentIndex.value + 1
+          state.mainDisplay = true
+          state.currentIndex = state.currentIndex + 1
         }, 150)
       } else {
-        resultDialog.value = true
+        state.resultDialog = true
       }
       initialize()
     }
     const goToPrev = () => {
-      mainDisplay.value = false
+      state.mainDisplay = false
       setTimeout(()=>{
-        mainDisplay.value = true
-        if (currentIndex.value > 0){
-          currentIndex.value = currentIndex.value - 1
+        state.mainDisplay = true
+        if (state.currentIndex > 0){
+          state.currentIndex = state.currentIndex - 1
         } else {
-          currentIndex.value = questionSetLength.value - 1
+          state.currentIndex = questionSetLength.value - 1
         }
       }, 150)
       initialize()
     }
     const createChoicesClass = (key: string) => {
       if (checkedAndSelected.value.includes(key)) {
-        if (!isAnswer.value) {
+        if (!state.isAnswer) {
           return 'selected-or-checked'
         } else {
           return ''
@@ -209,7 +228,7 @@ export default defineComponent({
       }
     }
     const createRowColor = (key: string) => {
-      if (isAnswer.value && currentQuestion.value.answer.includes(key)) {
+      if (state.isAnswer && currentQuestion.value.answer.includes(key)) {
         if (checkedAndSelected.value.includes(key)) {
           return 'row-correct'
         } else {
@@ -220,9 +239,9 @@ export default defineComponent({
       }
     }
     const answer = () => {
-      isAnswer.value = true
+      state.isAnswer = true
       context.emit('updateAnswerHistory', currentQuestion.value.qNumber, isCorrect.value, DateTime.utc())
-      miniHistory.value.push({
+      state.miniHistory.push({
         qNumber: currentQuestion.value.qNumber,
         partOfQ: currentQuestion.value.question.slice(0,150) + '...',
         isCorrect: isCorrect.value
@@ -230,36 +249,30 @@ export default defineComponent({
     }
     const returnSetting = () => {
       initialize()
-      miniHistory.value = []
-      resultDialog.value = false
+      state.miniHistory = []
+      state.resultDialog = false
       router.push({name: 'Setting'})
     }
     const oneMoreSet = () => {
-      currentIndex.value = 0
-      miniHistory.value = []
-      resultDialog.value = false
+      state.currentIndex = 0
+      state.miniHistory = []
+      state.resultDialog = false
       initialize()
     }
     return {
+      state,
       currentQuestion,
-      currentIndex,
-      selected,
-      checked,
       acceptClickSingle,
       acceptClickMulti,
       goToNext,
       goToPrev,
       createChoicesClass,
       createRowColor,
-      isAnswer,
       isCorrect,
       answer,
-      resultDialog,
-      miniHistory,
       returnSetting,
       oneMoreSet,
       resultText,
-      mainDisplay
     }
   }
 });
