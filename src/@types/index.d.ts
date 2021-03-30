@@ -1,5 +1,3 @@
-import { DateTime } from 'luxon'
-
 export interface Question {
     qNumber: number;
     question: string;
@@ -9,14 +7,14 @@ export interface Question {
     responses?: number;
     correctRate?: number;
     correctRateStatus?: string;
-    lastAnswerDate?: DateTime;
+    lastAnswerDate?: string;
 }
     
 export interface AnswerHistory {
     qNumber: number;
     responses: number;
     corrects: number;
-    lastAnswerDate: DateTime;
+    lastAnswerDate: string;
 }    
 
 declare module 'twemoji'

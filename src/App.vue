@@ -17,7 +17,7 @@
 
 
 <script lang="ts">
-import { defineComponent, computed, ref, onMounted, toRaw, Ref } from 'vue';
+import { defineComponent, ref, toRaw } from 'vue';
 import { setState, getState, deleteState } from '@/storage'
 import { Question, AnswerHistory } from '@/@types/index'
 import { DateTime } from 'luxon'
@@ -48,7 +48,7 @@ export default defineComponent({
       questionSet.value = filteredQuestions
     }
 
-    const updateAnswerHistory = (qNumber: number, isCorrect: boolean, answerDate: DateTime) => {
+    const updateAnswerHistory = (qNumber: number, isCorrect: boolean, answerDate: string) => {
       const updateTarget = history.value?history.value.filter((value)=>value.qNumber==qNumber):[]
       if (updateTarget.length==0) {
         history.value.push({

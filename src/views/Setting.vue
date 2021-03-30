@@ -11,7 +11,7 @@
     <div v-if="questionList.length > 0">
       <el-row :gutter="10">
         <el-col :span="10">
-          <el-card class="card-header" header="Questions / 1 Set" :body-style="{height:'42px'}">
+          <el-card header="Questions / 1 Set" :body-style="{height:'42px'}">
             <el-radio-group v-model="state.qSet">
               <el-radio-button label="10"></el-radio-button>
               <el-radio-button label="20"></el-radio-button>
@@ -23,19 +23,20 @@
         </el-col>
         <el-col :span="10">
           <el-card header="Sorting" :body-style="{height:'42px'}">
-            <el-select v-model="state.sortPattern">
-              <el-option
-                v-for="item in sortItems"
-                :key="item.value"
-                :label="item.text"
-                :value="item.value">
-              </el-option>
-            </el-select>
-            <el-radio-group v-model="state.sortOrder" v-if="state.sortPattern != 'nothing'">
-              <el-radio-button label="ASC" ><i class="el-icon-caret-top"></i></el-radio-button>
-              <el-radio-button label="DESC"><i class="el-icon-caret-bottom"></i></el-radio-button>
-            </el-radio-group>
-
+            <el-row type="flex" justify="center">
+              <el-select v-model="state.sortPattern">
+                <el-option
+                  v-for="item in sortItems"
+                  :key="item.value"
+                  :label="item.text"
+                  :value="item.value">
+                </el-option>
+              </el-select>
+              <el-radio-group v-model="state.sortOrder" v-if="state.sortPattern != 'nothing'">
+                <el-radio-button label="ASC" ><i class="el-icon-caret-top"></i></el-radio-button>
+                <el-radio-button label="DESC"><i class="el-icon-caret-bottom"></i></el-radio-button>
+              </el-radio-group>
+            </el-row>
           </el-card>
         </el-col>
         <el-col :span="4">
@@ -91,7 +92,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, ref, watch, PropType, reactive, toRaw, Ref } from 'vue';
+import { defineComponent, computed, watch, PropType, reactive, toRaw } from 'vue';
 import { useRouter } from 'vue-router'
 import { Question, AnswerHistory } from '@/@types/index'
 import { DateTime } from 'luxon'
@@ -161,7 +162,7 @@ export default defineComponent({
         value['correctRateStatus'] = 'Nothing'
         value['correctRate'] = 0
         value['responses'] = 0
-        value['lastAnswerDate'] = DateTime.fromISO('2001-01-01T00:00:00').toUTC()
+        value['lastAnswerDate'] = DateTime.fromISO('2001-01-01T00:00:00').toUTC().toString()
 
         // 追加属性のマッピング
         const targetRecord = props.answerHistory?props.answerHistory.filter((hVal: AnswerHistory)=>hVal.qNumber==value.qNumber):[]

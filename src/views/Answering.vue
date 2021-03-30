@@ -110,7 +110,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, reactive } from 'vue';
+import { defineComponent, computed, reactive } from 'vue';
 import { useRouter } from 'vue-router'
 import { DateTime } from 'luxon'
 
@@ -152,14 +152,6 @@ export default defineComponent({
       miniHistory: [],
       mainDisplay: true
     })
-
-    // const currentIndex = ref<number>(0)
-    // const checked = ref<string[]>([])
-    // const selected = ref<string>()
-    // const isAnswer = ref(false)
-    // const resultDialog = ref(false)
-    // const miniHistory = ref<MiniHistory[]>([])
-    // const mainDisplay = ref(true)
 
     const questionSetLength = computed(()=>props.questionSet?props.questionSet.length:0)
     const currentQuestion = computed(()=>props.questionSet?props.questionSet[state.currentIndex]:'')
@@ -240,7 +232,7 @@ export default defineComponent({
     }
     const answer = () => {
       state.isAnswer = true
-      context.emit('updateAnswerHistory', currentQuestion.value.qNumber, isCorrect.value, DateTime.utc())
+      context.emit('updateAnswerHistory', currentQuestion.value.qNumber, isCorrect.value, DateTime.utc().toString())
       state.miniHistory.push({
         qNumber: currentQuestion.value.qNumber,
         partOfQ: currentQuestion.value.question.slice(0,150) + '...',
