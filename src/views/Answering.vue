@@ -155,7 +155,7 @@ export default defineComponent({
 
     const questionSetLength = computed(()=>props.questionSet?props.questionSet.length:0)
     const currentQuestion = computed(()=>props.questionSet?props.questionSet[state.currentIndex]:'')
-    const checkedAndSelected = computed(()=>[...state.checked, state.selected])
+    const checkedAndSelected = computed(()=>currentQuestion.value.answer.length>1?[...state.checked]:[state.selected])
     const isCorrect = computed(()=>{
       const ans = [...currentQuestion.value.answer]
       const cas = [...checkedAndSelected.value]
