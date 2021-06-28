@@ -10,13 +10,25 @@
             <el-card>
               <template #header>
                 <div class="card-header">
-                  {{ examTitle + ': Q' + currentQuestion.qNumber }}
+                  <el-row type="flex" justify="space-between">
+                    {{ examTitle + ': Q' + currentQuestion.qNumber }}
+                    <el-button 
+                      size="small"
+                      type="primary" 
+                      round 
+                      plain
+                      @click="changeLang"
+                    >
+                      in {{ state.lang == 'ja' ? 'EN' : 'JA'}}
+                    </el-button>
+                  </el-row>
                 </div>
               </template>
               <div class="card-body">
-                <p v-for="phrase in currentQuestion.question.split('\n')" :key="phrase">
+                <div class="v-html" v-html="currentQuestion.question[state.lang]" />
+                <!-- <p v-for="phrase in currentQuestion.question.split('\n')" :key="phrase">
                   {{ phrase }}
-                </p>  
+                </p>   -->
               </div>
             </el-card>
             <el-card>
@@ -28,7 +40,7 @@
                       <el-checkbox :label="key" :disabled="state.isAnswer"><span></span></el-checkbox>
                     </el-col>
                     <el-col :span="23" class="choices" @click="acceptClickMulti(key)">
-                      <p :class="createChoicesClass(key)">{{ value }}</p>
+                      <p :class="createChoicesClass(key)">{{ value[state.lang] }}</p>
                     </el-col>
                   </el-row>
                 </el-checkbox-group>
@@ -39,7 +51,7 @@
                       <el-radio :label="key" :disabled="state.isAnswer"><span></span></el-radio>
                     </el-col>
                     <el-col :span="23"  class="choices" @click="acceptClickSingle(key)">
-                      <p :class="createChoicesClass(key)">{{ value }}</p>
+                      <p :class="createChoicesClass(key)">{{ value[state.lang] }}</p>
                     </el-col>
                   </el-row>
                 </el-radio-group>
@@ -48,15 +60,30 @@
 
               <el-row type="flex" justify="center">
                 <el-col :span="16">
-                  <el-button type="primary" plain icon="el-icon-check" class="under-button" v-if="!state.isAnswer" @click="answer"/>
+                  <el-button 
+                    type="primary" plain 
+                    icon="el-icon-check" 
+                    class="under-button" 
+                    v-if="!state.isAnswer" 
+                    @click="answer"
+                  />
                   <el-button :type="isCorrect?'success':'danger'" icon="el-icon-arrow-right" class="under-button" v-else @click="goToNext" />
                 </el-col>
               </el-row>
 
               <el-row class="card-explanation" v-if="state.isAnswer">
-                <p v-for="phrase in currentQuestion.explanation.split('\n')" :key="phrase">
+                <p v-for="phrase in currentQuestion.explanation[state.lang].split('\n')" :key="phrase">
                   {{ phrase }}
                 </p>  
+                <el-col :span="20" v-for="disc in currentQuestion.discussion" :key="disc.username">
+                  <discussion 
+                    :comment="disc.comment[state.lang]"
+                    :postedDate="disc.posted_date"
+                    :upvotes="disc.upvotes"
+                    :username="disc.username"
+                    :key="disc.username"
+                  ></discussion>
+                </el-col>
               </el-row>
 
             </el-card>
@@ -110,9 +137,10 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, reactive } from 'vue';
+import { defineComponent, computed, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router'
 import { DateTime } from 'luxon'
+import Discussion from '@/components/Discussion.vue'
 
 interface MiniHistory {
   qNumber: number;
@@ -128,6 +156,7 @@ interface State {
   resultDialog: boolean;
   miniHistory: MiniHistory[];
   mainDisplay: boolean;
+  lang: string;
 }
 
 export default defineComponent({
@@ -140,7 +169,9 @@ export default defineComponent({
       type: String
     }
   },
-
+  components: {
+    Discussion
+  },
   setup(props, context){
     const router = useRouter()
     const state = reactive<State>({
@@ -150,7 +181,8 @@ export default defineComponent({
       isAnswer: false,
       resultDialog: false,
       miniHistory: [],
-      mainDisplay: true
+      mainDisplay: true,
+      lang: 'ja'
     })
 
     const questionSetLength = computed(()=>props.questionSet?props.questionSet.length:0)
@@ -183,6 +215,13 @@ export default defineComponent({
       state.selected = ''
       state.checked = []
       state.isAnswer = false
+    }
+    const changeLang = () => {
+      if (state.lang === 'ja'){
+        state.lang = 'en'
+      } else {
+        state.lang = 'ja'
+      }
     }
     const goToNext = () => {
       if (state.currentIndex < questionSetLength.value - 1){
@@ -251,11 +290,45 @@ export default defineComponent({
       state.resultDialog = false
       initialize()
     }
+
+    onMounted(()=>{
+      document.onkeydown = (e) => {
+        if (!state.resultDialog) {
+          if (e.key == 'Enter'){
+            if (state.isAnswer) {
+              goToNext()
+            } else {
+              answer()
+            }
+          } else if (e.key == 'ArrowRight'){
+            goToNext()
+          } else if (e.key == 'ArrowLeft'){
+            goToPrev()
+          }
+
+          // 選択肢のキーバインド
+          if (!state.isAnswer) {
+            if (['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k'].includes(e.key)){
+              const upperKey = e.key.toUpperCase()
+              if (upperKey in currentQuestion.value.choices) {
+                if (currentQuestion.value.answer.length > 1){
+                  acceptClickMulti(upperKey)
+                } else {
+                  acceptClickSingle(upperKey)
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+
     return {
       state,
       currentQuestion,
       acceptClickSingle,
       acceptClickMulti,
+      changeLang,
       goToNext,
       goToPrev,
       createChoicesClass,
@@ -317,6 +390,7 @@ label.check-box {
 .card-body {
   text-align: left;
   margin: 20px 10px 15px 10px;
+  font-size: large;
 }
 
 .card-body p {
