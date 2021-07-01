@@ -274,7 +274,7 @@ export default defineComponent({
       context.emit('updateAnswerHistory', currentQuestion.value.qNumber, isCorrect.value, DateTime.utc().toString())
       state.miniHistory.push({
         qNumber: currentQuestion.value.qNumber,
-        partOfQ: currentQuestion.value.question.slice(0,150) + '...',
+        partOfQ: currentQuestion.value.question[state.lang].slice(0,150) + '...',
         isCorrect: isCorrect.value
       })
     }
