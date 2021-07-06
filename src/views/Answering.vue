@@ -197,6 +197,13 @@ export default defineComponent({
       const corrects = state.miniHistory.filter(value=>value.isCorrect).length 
       return corrects + ' / ' + state.miniHistory.length 
     })
+    // Question からタグを除去
+    const plainQuestion = computed(()=>{
+      const el = document.createElement('html')
+      el.innerHTML = currentQuestion.value.question[state.lang]
+      const qString = el.getElementsByTagName('p')[0].textContent
+      return qString ?? '' 
+    })
 
     const acceptClickSingle = (key: string) => {
       if (state.isAnswer) { return }
@@ -274,7 +281,8 @@ export default defineComponent({
       context.emit('updateAnswerHistory', currentQuestion.value.qNumber, isCorrect.value, DateTime.utc().toString())
       state.miniHistory.push({
         qNumber: currentQuestion.value.qNumber,
-        partOfQ: currentQuestion.value.question[state.lang].slice(0,150) + '...',
+        partOfQ: plainQuestion.value.slice(0,150) + '...',
+        // partOfQ: currentQuestion.value.question[state.lang].slice(0,150) + '...',
         isCorrect: isCorrect.value
       })
     }
